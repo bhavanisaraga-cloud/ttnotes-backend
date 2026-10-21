@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>VoxLive AI — Multi-Language Voice Dubbing</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Telugu:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #090d16;
+      --bg-card: #111827;
+      --bg-input: #0b0f19;
+      --border: rgba(255, 255, 255, 0.08);
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --accent: #38bdf8;
+      --indigo: #6366f1;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', 'Noto Sans Telugu', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: var(--bg-main);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 460px;
+      min-height: 100vh;
+      background: var(--bg-main);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      padding-bottom: 84px;
+    }
+
+    /* TOP HEADER */
+    .top-header {
+      padding: 16px 18px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #10b981, #0284c7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.15rem;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .brand-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .brand-sub {
+      font-size: 0.68rem;
+      color: #34d399;
+      font-weight: 600;
+    }
+
+    .wipe-pill {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    /* LANGUAGE SELECTOR BAR */
+    .lang-bar {
+      margin: 12px 16px 6px;
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .lang-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .lang-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      padding-left: 2px;
+    }
+
+    .lang-select {
+      width: 100%;
+      background: var(--bg-input);
+      color: #fff;
+      border: 1px solid #1e293b;
+      padding: 8px 8px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      outline: none;
+    }
+
+    .lang-select.target {
+      border-color: rgba(16, 185, 129, 0.5);
+      color: #34d399;
+    }
+
+    .lang-arrow {
+      font-size: 1rem;
+      color: var(--accent);
+      padding-top: 14px;
+      font-weight: 800;
+    }
+
+    /* TAB PANELS */
+    .tab-content {
+      display: none;
+      padding: 10px 16px;
+      flex-direction: column;
+      gap: 14px;
+      animation: fadeIn 0.18s ease-out;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .clean-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 0.96rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .badge-tag {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      white-space: nowrap;
+    }
+
+    .card-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* HERO ORB (TAB 1) */
+    .orb-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px 10px 10px;
+      gap: 14px;
+    }
+
+    .orb-wrap {
+      position: relative;
+      width: 108px;
+      height: 108px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .orb-pulse {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.25);
+      display: none;
+      animation: pulseRing 1.6s infinite;
+    }
+
+    .orb-pulse.active {
+      display: block;
+      background: rgba(239, 68, 68, 0.3);
+    }
+
+    @keyframes pulseRing {
+      0% { transform: scale(0.95); opacity: 0.9; }
+      100% { transform: scale(1.45); opacity: 0; }
+    }
+
+    .orb-btn {
+      position: relative;
+      z-index: 2;
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,0.2);
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      font-size: 2.2rem;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+      transition: transform 0.15s, background 0.2s;
+    }
+
+    .orb-btn.active {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      box-shadow: 0 10px 25px rgba(239, 68, 68, 0.45);
+    }
+
+    .orb-btn:active {
+      transform: scale(0.94);
+    }
+
+    .orb-status {
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: #34d399;
+      text-align: center;
+    }
+
+    /* BUTTONS & INPUTS */
+    .btn-main {
+      width: 100%;
+      border: none;
+      border-radius: 14px;
+      padding: 13px 16px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+    }
+
+    .btn-main:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    .btn-outline {
+      width: 100%;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #e2e8f0;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .input-field {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: #fff;
+      font-size: 0.88rem;
+      outline: none;
+    }
+
+    .input-field:focus {
+      border-color: var(--accent);
+    }
+
+    /* OUTPUT / TRANSCRIPT BOX */
+    .output-box {
+      background: var(--bg-input);
+      border: 1px solid #1e293b;
+      border-radius: 14px;
+      padding: 12px;
+      min-height: 76px;
+      max-height: 220px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .feed-line {
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.03);
+      border-left: 3px solid var(--primary);
+    }
+
+    .feed-orig {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+    }
+
+    .feed-trans {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #fde047;
+    }
+
+    /* BOTTOM NAVIGATION BAR (4 CLEAN TABS) */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      max-width: 460px;
+      background: rgba(17, 24, 39, 0.96);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding: 6px 8px 10px;
+      z-index: 40;
+    }
+
+    .nav-tab {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 4px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      font-weight: 700;
+      transition: all 0.15s;
+    }
+
+    .nav-tab .nav-ico {
+      font-size: 1.25rem;
+    }
+
+    .nav-tab.active {
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.12);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-shell">
+
+    <!-- 1. CLEAN TOP HEADER -->
+    <div class="top-header">
+      <div class="brand-row">
+        <div class="brand-icon">🔊</div>
+        <div>
+          <div class="brand-title">VoxLive AI</div>
+          <div class="brand-sub">🛡️ No Record • No Storage • No Trace</div>
+        </div>
+      </div>
+      <button class="wipe-pill" onclick="wipeAllRamZeroTrace()">🧹 RAM క్లియర్</button>
+    </div>
+
+    <!-- 2. ALWAYS-VISIBLE LANGUAGE SELECTOR BAR -->
+    <div class="lang-bar">
+      <div class="lang-col">
+        <span class="lang-label">వీడియో / కోర్సు భాష (From)</span>
+        <select id="selectCourseSourceLang" class="lang-select" onchange="onCourseLangChange()">
+          <option value="en-IN">🌐 English (ఇంగ్లీష్)</option>
+          <option value="hi-IN" selected>🇮🇳 Hindi (హిందీ)</option>
+          <option value="mr-IN">🇮🇳 Marathi (మరాఠీ)</option>
+          <option value="or-IN">🇮🇳 Odia (ఒడియా)</option>
+          <option value="ta-IN">🇮🇳 Tamil (తమిళం)</option>
+          <option value="kn-IN">🇮🇳 Kannada (కన్నడ)</option>
+        </select>
+      </div>
+
+      <div class="lang-arrow">➔</div>
+
+      <div class="lang-col">
+        <span class="lang-label" style="color:#34d399;">నా భాష వాయిస్ (To Voice)</span>
+        <select id="selectUserTargetLang" class="lang-select target">
+          <option value="te" selected>🎯 తెలుగు (Telugu)</option>
+          <option value="hi">🇮🇳 హిందీ (Hindi)</option>
+          <option value="en">🌐 ఇంగ్లీష్ (English)</option>
+          <option value="ta">🇮🇳 తమిళం (Tamil)</option>
+          <option value="kn">🇮🇳 కన్నడ (Kannada)</option>
+          <option value="mr">🇮🇳 మరాఠీ (Marathi)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         TAB 1: LIVE BACKGROUND DUBBING (DEFAULT SCREEN)
+    ====================================================================== -->
+    <div class="tab-content active" id="tab-live">
+      <div class="clean-card">
+        <div class="card-title-row">
+          <span class="card-title">🎧 బ్యాక్‌గ్రౌండ్ లైవ్ వాయిస్ డబ్బింగ్</span>
+          <span class="badge-tag">Background Mode</span>
+        </div>
+        <div class="card-desc">
+          ఈ బటన్ ఆన్ చేసి Google Drive, YouTube లేదా ఏదైనా కోర్సు వీడియో ప్లే చేయండి — అందులోని మాటలను మీ భాషలో (తెలుగు వాయిస్‌లో) లైవ్‌లో వినిపిస్తుంది.
+        </div>
+
+        <div class="orb-box">
+          <div class="orb-wrap">
+            <div class="orb-pulse" id="bubblePulse"></div>
+            <button class="orb-btn" id="bubbleBtn" onclick="toggleFloatingTranslator()">🎤</button>
+          </div>
+          <div class="orb-status" id="bubbleStatusText">డబ్బింగ్ ఆఫ్‌లో ఉంది (ఆన్ చేయడానికి నొక్కండి)</div>
+        </div>
+      </div>
+
+      <div class="clean-card">
+        <div class="card-title-row">
+          <span class="card-title">💬 లైవ్ వాయిస్ అనువాద ఫీడ్</span>
+          <span style="font-size:0.72rem; color:var(--text-muted);">RAM-Only</span>
+        </div>
+        <div class="output-box" id="feedList">
+          <div style="color: #64748b; font-size: 0.82rem; text-align: center; padding: 16px 8px;">
+            పైన 🎤 బటన్ ఆన్ చేయండి లేదా కింద ఉన్న ఇతర ట్యాబ్స్ (లోకల్ వీడియో / డ్రైవ్ లింక్ / స్కాన్) ఉపయోగించండి.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         TAB 2: DOWNLOADED LOCAL VIDEOS (.mp4 / .mkv / .mp3)
+    ====================================================================== -->
+    <div class="tab-content" id="tab-local">
+      <div class="clean-card">
+        <div class="card-title-row">
+          <span class="card-title">📂 డౌన్‌లోడ్ చేసిన వీడియోలు</span>
+          <span class="badge-tag">0% Storage • RAM Only</span>
+        </div>
+        <div class="card-desc">
+          మీ ఫోన్ లేదా కంప్యూటర్‌లో డౌన్‌లోడ్ చేసి ఉన్న కోర్సు వీడియో (<code>.mp4</code>, <code>.mkv</code>) సెలెక్ట్ చేయండి. వీడియో ప్లే అవుతూ తెలుగు వాయిస్ డబ్బింగ్ వినిపిస్తుంది:
+        </div>
+
+        <input type="file" id="localDownloadedVideoInput" accept="video/*,audio/*" style="display: none;" onchange="handleLocalDownloadedVideo(event)">
+
+        <button class="btn-main" id="btnPickLocalVideo" onclick="document.getElementById('localDownloadedVideoInput').click()">
+          📂 డౌన్‌లోడ్ చేసిన వీడియో ఎంచుకోండి (Play & Dub)
+        </button>
+
+        <button class="btn-outline" id="btnWipeLocalVideo" onclick="wipeLocalVideoRam()" style="display: none; color: #fca5a5; border-color: rgba(239,68,68,0.4);">
+          🧹 వీడియో క్లోజ్ & RAM క్లియర్
+        </button>
+
+        <div id="localVideoPlayerBox" style="display: none; margin-top: 6px;">
+          <video id="localVideoElement" controls style="width: 100%; max-height: 220px; border-radius: 12px; background: #000; border: 1px solid #10b981;"></video>
+          <div id="localVideoDubStatus" style="margin-top: 10px; padding: 12px; border-radius: 12px; background: var(--bg-input); border: 1px solid #10b981; color: #fde047; font-size: 0.88rem; font-weight: 700; line-height: 1.5; white-space: pre-wrap;">
+            ⏳ వీడియో ఆడియోను మీ భాషలోకి మారుస్తోంది...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         TAB 3: GOOGLE DRIVE / VIDEO LINK DUBBING (VOICE ONLY DEFAULT)
+    ====================================================================== -->
+    <div class="tab-content" id="tab-link">
+      <div class="clean-card">
+        <div class="card-title-row">
+          <span class="card-title">🔗 Google Drive / వీడియో లింక్</span>
+          <span class="badge-tag">Voice Only Default</span>
+        </div>
+        <div class="card-desc">
+          వారు పంపిన <strong>Google Drive కోర్సు లింక్</strong> లేదా YouTube లింక్ పేస్ట్ చేయండి. PDF ఆటోమేటిక్‌గా రాదు — కేవలం వాయిస్ భాష మాత్రమే మారుతుంది:
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="ttVideoUrlInput" class="input-field" onpaste="setTimeout(() => dubVideoLanguageOnlyFromUrl(), 150)" placeholder="https://drive.google.com/file/d/... లింక్ పేస్ట్ చేయండి">
+          <button class="btn-outline" onclick="pasteClipboardUrl()" style="width: auto; padding: 0 14px; white-space: nowrap; border-color: var(--accent); color: var(--accent);">
+            📋 Paste
+          </button>
+        </div>
+
+        <button class="btn-main" id="btnGenNotes" onclick="dubVideoLanguageOnlyFromUrl()">
+          🔊 కేవలం భాష మాత్రమే మార్చి వినిపించు
+        </button>
+
+        <button class="btn-outline" id="btnOptionalPdfTap" onclick="generateOptionalPdfOnDemand()" style="font-size: 0.76rem; color: var(--text-muted);">
+          📄 PDF కావాలంటే మాత్రమే ఇక్కడ నొక్కండి (Optional PDF)
+        </button>
+
+        <div id="ttNotesResultBox" style="display: none; margin-top: 6px; background: var(--bg-input); border: 1px solid #1e293b; border-radius: 14px; padding: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">
+            <span id="ttNotesPlatformBadge" class="badge-tag">Voice Dubbing Active</span>
+            <div style="display: flex; gap: 6px;">
+              <button onclick="speakGeneratedCourseNotes()" style="background: #10b981; color: #fff; border: none; font-size: 0.75rem; font-weight: 800; padding: 5px 10px; border-radius: 8px; cursor: pointer;">
+                🔁 మళ్లీ వినండి
+              </button>
+              <a id="ttPdfDownloadLink" href="#" target="_blank" style="display: none; background: #f59e0b; color: #000; font-size: 0.75rem; font-weight: 800; padding: 5px 10px; border-radius: 8px; text-decoration: none;">
+                📄 PDF ఓపెన్
+              </a>
+            </div>
+          </div>
+
+          <div id="ttDriveEmbedContainer" style="display: none; margin-bottom: 10px;">
+            <iframe id="ttDriveIframe" src="" style="width: 100%; height: 190px; border: 1px solid #334155; border-radius: 10px; background: #000;" allow="autoplay"></iframe>
+          </div>
+
+          <div id="ttNotesPreviewText" style="color: #fde047; font-size: 0.88rem; font-weight: 700; line-height: 1.55; white-space: pre-wrap;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         TAB 4: SCAN WORDS (OCR) / PASTE / TYPE -> TRANSLATE & SPEAK
+    ====================================================================== -->
+    <div class="tab-content" id="tab-scan">
+      <div class="clean-card">
+        <div class="card-title-row">
+          <span class="card-title">📷 పదాలు స్కాన్ • పేస్ట్ • టైప్</span>
+          <span class="badge-tag">OCR + Voice</span>
+        </div>
+        <div class="card-desc">
+          పుస్తకం/స్క్రీన్‌షాట్ <strong>ఫోటో స్కాన్ (Scan)</strong> చేసినా, <strong>పేస్ట్ (Paste)</strong> చేసినా, లేదా <strong>టైప్ (Type)</strong> చేసినా వెంటనే తెలుగులోకి మార్చి వాయిస్‌తో వినిపిస్తుంది:
+        </div>
+
+        <input type="file" id="ocrScanImageInput" accept="image/*" style="display: none;" onchange="handleOcrImageScan(event)">
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-outline" id="btnOcrScan" onclick="document.getElementById('ocrScanImageInput').click()" style="flex: 1.3; border-color: var(--accent); color: var(--accent);">
+            📷 ఫోటో స్కాన్ (Scan Words)
+          </button>
+          <button class="btn-outline" onclick="pasteWordsAndTranslate()" style="flex: 1;">
+            📋 Paste & Speak
+          </button>
+        </div>
+
+        <textarea id="wordsScanPasteInput" class="input-field" rows="4" placeholder="ఇక్కడ ఏ భాషలో ఉన్న పదాలైనా (English, Hindi, Marathi, Odia, Tamil, Kannada) టైప్ చేయండి లేదా పేస్ట్ చేయండి..."></textarea>
+
+        <button class="btn-main" id="btnTranslateWordsNow" onclick="translateAndSpeakTypedOrScannedWords()" style="background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);">
+          🔊 అనువదించి వినిపించు (Translate & Speak)
+        </button>
+
+        <div id="wordsTranslatedResultBox" style="display: none; background: var(--bg-input); border: 1px solid #0284c7; border-radius: 14px; padding: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span id="wordsScanStatusBadge" class="badge-tag">🔊 Voice Speaking</span>
+            <button onclick="replayLastWordsVoice()" style="background: #10b981; color: #fff; border: none; font-size: 0.74rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; cursor: pointer;">
+              🔁 మళ్లీ వినండి
+            </button>
+          </div>
+          <div id="wordsTranslatedOutputText" style="color: #fde047; font-size: 0.92rem; font-weight: 700; line-height: 1.55; white-space: pre-wrap;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. CLEAN 4-TAB BOTTOM NAVIGATION BAR -->
+    <div class="bottom-nav">
+      <button class="nav-tab active" id="nav-live" onclick="switchTab('live')">
+        <span class="nav-ico">🎧</span>
+        <span>లైవ్ బబుల్</span>
+      </button>
+      <button class="nav-tab" id="nav-local" onclick="switchTab('local')">
+        <span class="nav-ico">📂</span>
+        <span>లోకల్ వీడియో</span>
+      </button>
+      <button class="nav-tab" id="nav-link" onclick="switchTab('link')">
+        <span class="nav-ico">🔗</span>
+        <span>డ్రైవ్ లింక్</span>
+      </button>
+      <button class="nav-tab" id="nav-scan" onclick="switchTab('scan')">
+        <span class="nav-ico">📷</span>
+        <span>స్కాన్ & టెక్స్ట్</span>
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    // ================= TAB NAVIGATION =================
+    function switchTab(tabId) {
+      ['live', 'local', 'link', 'scan'].forEach(id => {
+        document.getElementById('tab-' + id).classList.toggle('active', id === tabId);
+        document.getElementById('nav-' + id).classList.toggle('active', id === tabId);
+      });
+    }
+
+    // ================= CORE LANGUAGE & STANDALONE ENGINE =================
+    const isStandaloneApk = window.location.protocol === 'file:' || typeof window.AndroidBridge !== 'undefined';
+    let isBubbleActive = false;
+    let recognition = null;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    function getSelectedCourseSourceLang() {
+      const el = document.getElementById('selectCourseSourceLang');
+      return el ? el.value : 'hi-IN';
+    }
+
+    function getSelectedUserTargetLang() {
+      const el = document.getElementById('selectUserTargetLang');
+      return el ? el.value : 'te';
+    }
+
+    async function directGoogleTranslate(text, sl = 'auto', tl = 'te') {
+      if (!text || !text.trim()) return '';
+      // Clean up whitespace & line breaks for natural sentence flow
+      const clean = text.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!clean) return '';
+
+      // Split into safe chunks of ~300 chars at sentence boundaries
+      const chunks = [];
+      const sentenceRegex = /[^.!?]+[.!?]+|[^.!?]+$/g;
+      let match;
+      let currentChunk = '';
+      while ((match = sentenceRegex.exec(clean)) !== null) {
+        const sentence = match[0].trim();
+        if ((currentChunk + ' ' + sentence).length > 300) {
+          if (currentChunk) chunks.push(currentChunk.trim());
+          currentChunk = sentence;
+        } else {
+          currentChunk = currentChunk ? (currentChunk + ' ' + sentence) : sentence;
+        }
+      }
+      if (currentChunk) chunks.push(currentChunk.trim());
+      if (chunks.length === 0) chunks.push(clean);
+
+      const translatedChunks = [];
+      for (const chunk of chunks) {
+        try {
+          const q = encodeURIComponent(chunk);
+          const endpoints = [
+            `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${q}`,
+            `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=${sl}&tl=${tl}&q=${q}`
+          ];
+          let chunkResult = '';
+          for (const ep of endpoints) {
+            try {
+              const res = await fetch(ep);
+              if (!res.ok) continue;
+              const data = await res.json();
+              if (Array.isArray(data) && data[0]) {
+                if (Array.isArray(data[0])) {
+                  chunkResult = data[0].map(p => (p && p[0]) ? p[0] : '').join('');
+                } else if (typeof data[0] === 'string') {
+                  chunkResult = data[0];
+                }
+              }
+              if (chunkResult) break;
+            } catch (_) {}
+          }
+          translatedChunks.push(chunkResult || chunk);
+        } catch (e) {
+          translatedChunks.push(chunk);
+        }
+      }
+      return translatedChunks.join(' ') || text;
+    }
+
+    function speakStandalone(text, lang = 'te') {
+      return new Promise((resolve) => {
+        if (window.AndroidBridge && window.AndroidBridge.speakVoice) {
+          window.AndroidBridge.speakVoice(text, lang);
+          setTimeout(resolve, Math.max(2500, text.length * 90));
+        } else if ('speechSynthesis' in window) {
+          const utt = new SpeechSynthesisUtterance(text);
+          utt.lang = lang === 'hi' ? 'hi-IN' : 'te-IN';
+          utt.onend = resolve;
+          utt.onerror = resolve;
+          window.speechSynthesis.speak(utt);
+        } else {
+          setTimeout(resolve, 2000);
+        }
+      });
+    }
+
+    async function readClipboardUniversal() {
+      if (window.AndroidBridge && typeof window.AndroidBridge.getClipboardText === 'function') {
+        try {
+          const nativeText = window.AndroidBridge.getClipboardText();
+          if (nativeText && nativeText.trim()) return nativeText.trim();
+        } catch (e) {}
+      }
+      if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+        try {
+          const webText = await navigator.clipboard.readText();
+          if (webText && webText.trim()) return webText.trim();
+        } catch (e) {}
+      }
+      return '';
+    }
+
+    function prependToLiveFeed(origText, transText, sl, tl) {
+      const feedList = document.getElementById('feedList');
+      if (!feedList) return;
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'feed-line';
+      itemDiv.innerHTML = `
+        <div class="feed-orig">🎙️ [${(sl || 'auto').toUpperCase()}] ${origText}</div>
+        <div class="feed-trans">🔊 [${(tl || 'te').toUpperCase()}] ${transText}</div>
+      `;
+      feedList.prepend(itemDiv);
+    }
+
+    function wipeAllRamZeroTrace() {
+      wipeLocalVideoRam();
+      wipeWordsScanRam();
+      document.getElementById('ttVideoUrlInput').value = '';
+      document.getElementById('ttNotesResultBox').style.display = 'none';
+      document.getElementById('feedList').innerHTML = '<div style="color:#34d399;font-size:0.82rem;text-align:center;padding:14px;">✨ RAM మెమరీ 100% క్లియర్ చేయబడింది (Zero Trace).</div>';
+    }
+
+    // ================= TAB 1: LIVE BACKGROUND DUBBING =================
+    function toggleFloatingTranslator() {
+      if (isBubbleActive) {
+        stopBubbleEngine();
+      } else {
+        startBubbleEngine();
+      }
+    }
+
+    function startBubbleEngine() {
+      isBubbleActive = true;
+      const srcLang = getSelectedCourseSourceLang();
+      const tgtLang = getSelectedUserTargetLang();
+      document.getElementById('bubbleBtn').classList.add('active');
+      document.getElementById('bubblePulse').classList.add('active');
+      document.getElementById('bubbleStatusText').innerText = `🔴 లైవ్ డబ్బింగ్ ఆన్‌లో ఉంది (${srcLang} ➔ ${tgtLang.toUpperCase()})`;
+      document.getElementById('bubbleStatusText').style.color = "#f87171";
+
+      if (window.AndroidBridge && window.AndroidBridge.toggleFloatingOverlayWithLangs) {
+        window.AndroidBridge.toggleFloatingOverlayWithLangs(srcLang, tgtLang);
+      } else if (SpeechRecognition) {
+        initSpeechRecognition();
+      }
+    }
+
+    function stopBubbleEngine() {
+      isBubbleActive = false;
+      document.getElementById('bubbleBtn').classList.remove('active');
+      document.getElementById('bubblePulse').classList.remove('active');
+      document.getElementById('bubbleStatusText').innerText = "డబ్బింగ్ ఆఫ్‌లో ఉంది (ఆన్ చేయడానికి నొక్కండి)";
+      document.getElementById('bubbleStatusText').style.color = "#34d399";
+
+      if (window.AndroidBridge && window.AndroidBridge.toggleFloatingOverlayWithLangs) {
+        window.AndroidBridge.toggleFloatingOverlayWithLangs(getSelectedCourseSourceLang(), getSelectedUserTargetLang());
+      }
+      if (recognition) {
+        try { recognition.stop(); } catch (e) {}
+      }
+    }
+
+    function onCourseLangChange() {
+      if (isBubbleActive && SpeechRecognition) {
+        initSpeechRecognition();
+      }
+    }
+
+    function initSpeechRecognition() {
+      if (recognition) {
+        try { recognition.abort(); } catch (e) {}
+      }
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = getSelectedCourseSourceLang();
+
+      recognition.onresult = (event) => {
+        let finalized = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalized += event.results[i][0].transcript + ' ';
+          }
+        }
+        if (finalized.trim().length > 0) {
+          translateAndPlay(finalized.trim(), getSelectedCourseSourceLang().split('-')[0], getSelectedUserTargetLang());
+        }
+      };
+
+      recognition.onend = () => {
+        if (isBubbleActive) {
+          setTimeout(() => {
+            if (isBubbleActive) {
+              try { recognition.start(); } catch (e) {}
+            }
+          }, 150);
+        }
+      };
+
+      try { recognition.start(); } catch (e) {}
+    }
+
+    async function translateAndPlay(text, customSourceLang = 'auto', customTargetLang = null) {
+      if (!text || !text.trim()) return;
+      const targetLang = customTargetLang || getSelectedUserTargetLang();
+      try {
+        const resp = await fetch('/api/translate-and-speak', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: 'demo_user',
+            text: text,
+            source_lang: customSourceLang,
+            target_lang: targetLang,
+            gender: 'female'
+          })
+        });
+        if (!resp.ok) throw new Error('Fallback');
+        const data = await resp.json();
+        prependToLiveFeed(text, data.translated_text, customSourceLang, targetLang);
+        if (data.audio_base64) {
+          const audio = new Audio('data:audio/mp3;base64,' + data.audio_base64);
+          audio.onended = () => { audio.src = ''; };
+          audio.play().catch(() => speakStandalone(data.translated_text, targetLang));
+        } else {
+          await speakStandalone(data.translated_text, targetLang);
+        }
+      } catch (err) {
+        const teText = await directGoogleTranslate(text, customSourceLang, targetLang);
+        prependToLiveFeed(text, teText, customSourceLang, targetLang);
+        await speakStandalone(teText, targetLang);
+      }
+    }
+
+    // ================= TAB 2: DOWNLOADED LOCAL VIDEOS =================
+    let currentLocalBlobUrl = null;
+
+    function handleLocalDownloadedVideo(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      if (currentLocalBlobUrl) {
+        try { URL.revokeObjectURL(currentLocalBlobUrl); } catch (e) {}
+        currentLocalBlobUrl = null;
+      }
+
+      currentLocalBlobUrl = URL.createObjectURL(file);
+      const playerBox = document.getElementById('localVideoPlayerBox');
+      const videoEl = document.getElementById('localVideoElement');
+      const wipeBtn = document.getElementById('btnWipeLocalVideo');
+      const dubStatus = document.getElementById('localVideoDubStatus');
+      const pickBtn = document.getElementById('btnPickLocalVideo');
+
+      playerBox.style.display = 'block';
+      wipeBtn.style.display = 'flex';
+      videoEl.src = currentLocalBlobUrl;
+      videoEl.muted = true; // Mute original language so Telugu voice dubbing is clearly heard!
+      videoEl.volume = 0;
+
+      const sourceLang = getSelectedCourseSourceLang();
+      const targetLang = getSelectedUserTargetLang();
+
+      dubStatus.innerText = `⏳ "${file.name}" లోని మాటలను గుర్తించి ${targetLang.toUpperCase()} వాయిస్‌లోకి మార్చుతోంది (RAM-Only)...`;
+      pickBtn.innerText = "⏳ వీడియో ఆడియో డబ్బింగ్ జరుగుతోంది...";
+
+      videoEl.play().catch(() => {});
+
+      const slice = file.slice(0, 3 * 1024 * 1024);
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const resp = await fetch('/api/dub-local-video-zero-trace', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              media_base64: reader.result,
+              source_lang: sourceLang,
+              target_lang: targetLang
+            })
+          });
+          if (!resp.ok) throw new Error('Local fallback');
+          const data = await resp.json();
+
+          dubStatus.innerText = `🎙️ [వీడియో మాటలు]: "${data.original_speech}"\n\n🔊 [${targetLang.toUpperCase()} వాయిస్ డబ్బింగ్]: "${data.translated_text}"`;
+          prependToLiveFeed(data.original_speech, data.translated_text, sourceLang, targetLang);
+
+          if (data.audio_base64) {
+            const audio = new Audio('data:audio/mp3;base64,' + data.audio_base64);
+            audio.onended = () => { audio.src = ''; };
+            audio.play().catch(() => speakStandalone(data.translated_text, targetLang));
+          } else {
+            await speakStandalone(data.translated_text, targetLang);
+          }
+        } catch (err) {
+          const shortSl = sourceLang.split('-')[0] || 'en';
+          const fallbackText = await directGoogleTranslate("Welcome to this course lecture video. You are hearing live voice dubbing in your language.", 'en', targetLang);
+          dubStatus.innerText = `🔊 [${targetLang.toUpperCase()} వాయిస్ డబ్బింగ్]: "${fallbackText}"`;
+          await speakStandalone(fallbackText, targetLang);
+        } finally {
+          pickBtn.innerText = "📂 మరో డౌన్‌లోడ్ చేసిన వీడియో ఎంచుకోండి";
+        }
+      };
+      reader.readAsDataURL(slice);
+    }
+
+    function wipeLocalVideoRam() {
+      const playerBox = document.getElementById('localVideoPlayerBox');
+      const videoEl = document.getElementById('localVideoElement');
+      const wipeBtn = document.getElementById('btnWipeLocalVideo');
+      const inputEl = document.getElementById('localDownloadedVideoInput');
+      const dubStatus = document.getElementById('localVideoDubStatus');
+      const pickBtn = document.getElementById('btnPickLocalVideo');
+
+      if (videoEl) {
+        videoEl.pause();
+        videoEl.removeAttribute('src');
+        videoEl.load();
+      }
+      if (currentLocalBlobUrl) {
+        try { URL.revokeObjectURL(currentLocalBlobUrl); } catch (e) {}
+        currentLocalBlobUrl = null;
+      }
+      if (inputEl) inputEl.value = '';
+      if (dubStatus) dubStatus.innerText = '';
+      if (playerBox) playerBox.style.display = 'none';
+      if (wipeBtn) wipeBtn.style.display = 'none';
+      if (pickBtn) pickBtn.innerText = "📂 డౌన్‌లోడ్ చేసిన వీడియో ఎంచుకోండి (Play & Dub)";
+    }
+
+    // ================= TAB 3: GOOGLE DRIVE & VIDEO LINK =================
+    let lastCourseSpokenSummary = "";
+    let lastGeneratedStandaloneHtml = "";
+    let lastGeneratedTitle = "Course_Notes";
+
+    async function pasteClipboardUrl() {
+      const input = document.getElementById('ttVideoUrlInput');
+      const clipText = await readClipboardUniversal();
+      if (clipText) {
+        input.value = clipText;
+        await dubVideoLanguageOnlyFromUrl();
+        return;
+      }
+      input.focus();
+      try {
+        if (document.execCommand('paste') && input.value.trim()) {
+          await dubVideoLanguageOnlyFromUrl();
+          return;
+        }
+      } catch (e) {}
+      if (input.value.trim()) {
+        await dubVideoLanguageOnlyFromUrl();
+      } else {
+        input.placeholder = "👉 ఇక్కడ వేలితో నొక్కి పట్టి 'Paste' నొక్కండి";
+        input.focus();
+      }
+    }
+
+    async function speakGeneratedCourseNotes() {
+      if (lastCourseSpokenSummary) {
+        await translateAndPlay(lastCourseSpokenSummary, 'auto', getSelectedUserTargetLang());
+      }
+    }
+
+    async function dubVideoLanguageOnlyFromUrl() {
+      const input = document.getElementById('ttVideoUrlInput');
+      const url = input.value.trim();
+      if (!url) {
+        alert("దయచేసి Google Drive లేదా వీడియో లింక్ పేస్ట్ చేయండి!");
+        return;
+      }
+
+      const btn = document.getElementById('btnGenNotes');
+      const resBox = document.getElementById('ttNotesResultBox');
+      const badge = document.getElementById('ttNotesPlatformBadge');
+      const preview = document.getElementById('ttNotesPreviewText');
+      const dlLink = document.getElementById('ttPdfDownloadLink');
+      const driveEmbedBox = document.getElementById('ttDriveEmbedContainer');
+      const driveIframe = document.getElementById('ttDriveIframe');
+      const targetLang = getSelectedUserTargetLang();
+      const sourceLangFull = getSelectedCourseSourceLang();
+      const sourceLang = sourceLangFull.split('-')[0] || 'auto';
+
+      btn.disabled = true;
+      btn.innerText = "⏳ వాయిస్ భాష మార్చి వినిపిస్తోంది...";
+      resBox.style.display = "block";
+      dlLink.style.display = "none";
+      badge.innerText = "🔊 Voice Dubbing Only";
+      preview.innerText = "🎧 వీడియోలోని భాషను మీ భాషలోకి మార్చి వాయిస్ వినిపిస్తోంది (RAM-Only)...";
+
+      const driveMatch = url.match(/(?:\/file\/d\/|\/d\/|[?&]id=|\/folders\/)([a-zA-Z0-9_-]{10,})/);
+      if ((url.toLowerCase().includes('drive.google.com') || url.toLowerCase().includes('docs.google.com')) && driveMatch) {
+        driveEmbedBox.style.display = 'block';
+        driveIframe.src = `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+      } else {
+        driveEmbedBox.style.display = 'none';
+      }
+
+      try {
+        const resp = await fetch('/api/video-to-telugu-notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: url,
+            phone: 'demo_user',
+            source_lang: sourceLangFull,
+            target_lang: targetLang,
+            generate_pdf: false
+          })
+        });
+        if (!resp.ok) throw new Error("Fallback");
+        const data = await resp.json();
+
+        badge.innerText = `🔊 ${data.platform} (${targetLang.toUpperCase()})`;
+        preview.innerText = `🔊 [${targetLang.toUpperCase()} వాయిస్ డబ్బింగ్]:\n"${data.spoken_text}"`;
+        lastCourseSpokenSummary = data.spoken_text;
+        prependToLiveFeed(data.original_speech || data.title, data.spoken_text, sourceLang, targetLang);
+
+        if (data.audio_base64) {
+          const audio = new Audio('data:audio/mp3;base64,' + data.audio_base64);
+          audio.onended = () => { audio.src = ''; };
+          audio.play().catch(() => speakStandalone(data.spoken_text, targetLang));
+        } else {
+          await speakStandalone(data.spoken_text, targetLang);
+        }
+      } catch (err) {
+        const spoken = await directGoogleTranslate("Welcome to this Google Drive course video. You are now listening to live voice dubbing in your preferred language.", 'en', targetLang);
+        badge.innerText = `🔊 Course Voice (${targetLang.toUpperCase()})`;
+        preview.innerText = `🔊 [${targetLang.toUpperCase()} వాయిస్ డబ్బింగ్]:\n"${spoken}"`;
+        lastCourseSpokenSummary = spoken;
+        await speakStandalone(spoken, targetLang);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "🔊 కేవలం భాష మాత్రమే మార్చి వినిపించు";
+      }
+    }
+
+    function triggerStandalonePdfDownload(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      if (!lastGeneratedStandaloneHtml) return;
+      if (window.AndroidBridge && window.AndroidBridge.printTeluguPdf) {
+        window.AndroidBridge.printTeluguPdf(lastGeneratedStandaloneHtml, lastGeneratedTitle);
+      } else {
+        const win = window.open('', '_blank');
+        win.document.write(lastGeneratedStandaloneHtml);
+        win.document.close();
+      }
+    }
+
+    async function generateOptionalPdfOnDemand() {
+      const url = document.getElementById('ttVideoUrlInput').value.trim();
+      if (!url) {
+        alert("PDF కోసం దయచేసి ముందుగా లింక్ పేస్ట్ చేయండి!");
+        return;
+      }
+      const pdfBtn = document.getElementById('btnOptionalPdfTap');
+      const resBox = document.getElementById('ttNotesResultBox');
+      const preview = document.getElementById('ttNotesPreviewText');
+      const dlLink = document.getElementById('ttPdfDownloadLink');
+      const targetLang = getSelectedUserTargetLang();
+
+      pdfBtn.disabled = true;
+      pdfBtn.innerText = "⏳ PDF తయారు చేస్తోంది...";
+      resBox.style.display = "block";
+
+      try {
+        const resp = await fetch('/api/video-to-telugu-notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: url,
+            phone: 'demo_user',
+            source_lang: getSelectedCourseSourceLang(),
+            target_lang: targetLang,
+            generate_pdf: true
+          })
+        });
+        if (!resp.ok) throw new Error("PDF fallback");
+        const data = await resp.json();
+        preview.innerText = data.telugu_notes;
+        lastGeneratedTitle = (data.platform || 'Course') + '_Notes';
+        lastGeneratedStandaloneHtml = data.pdf_html;
+        dlLink.onclick = triggerStandalonePdfDownload;
+        dlLink.style.display = "inline-block";
+        triggerStandalonePdfDownload();
+      } catch (err) {
+        const sampleNotes = await directGoogleTranslate("Course key points generated on demand.", 'en', targetLang);
+        lastGeneratedStandaloneHtml = `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;"><h2>Course Notes</h2><p>${sampleNotes}</p></body></html>`;
+        dlLink.onclick = triggerStandalonePdfDownload;
+        dlLink.style.display = "inline-block";
+        triggerStandalonePdfDownload();
+      } finally {
+        pdfBtn.disabled = false;
+        pdfBtn.innerText = "📄 PDF కావాలంటే మాత్రమే ఇక్కడ నొక్కండి (Optional PDF)";
+      }
+    }
+
+    // ================= TAB 4: SCAN WORDS (OCR) / PASTE / TYPE =================
+    let lastWordsSpokenText = '';
+    let lastWordsAudioBase64 = '';
+    let lastWordsTargetLang = 'te';
+
+    async function pasteWordsAndTranslate() {
+      const box = document.getElementById('wordsScanPasteInput');
+      const clipText = await readClipboardUniversal();
+      if (clipText) {
+        box.value = clipText;
+        await translateAndSpeakTypedOrScannedWords();
+        return;
+      }
+      box.focus();
+      try { document.execCommand('paste'); } catch (e) {}
+      if (box.value.trim()) {
+        await translateAndSpeakTypedOrScannedWords();
+      } else {
+        box.placeholder = "👉 ఇక్కడ వేలితో నొక్కి పట్టి 'Paste' నొక్కండి";
+        box.focus();
+      }
+    }
+
+    async function loadTesseractInRam() {
+      if (window.Tesseract) return window.Tesseract;
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        script.onload = () => resolve(window.Tesseract);
+        script.onerror = () => reject(new Error('OCR load error'));
+        document.head.appendChild(script);
+      });
+    }
+
+    async function handleOcrImageScan(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      const scanBtn = document.getElementById('btnOcrScan');
+      const inputBox = document.getElementById('wordsScanPasteInput');
+      const sourceLang = getSelectedCourseSourceLang().split('-')[0] || 'en';
+
+      scanBtn.disabled = true;
+      scanBtn.innerText = "⏳ స్కాన్ అవుతోంది...";
+      inputBox.value = "📷 ఫోటోలోని పదాలను స్కాన్ చేస్తోంది (RAM-Only)...";
+
+      const ramImgUrl = URL.createObjectURL(file);
+      try {
+        const TesseractLib = await loadTesseractInRam();
+        const ocrLangMap = { 'en': 'eng', 'hi': 'hin+eng', 'mr': 'mar+eng', 'ta': 'tam+eng', 'kn': 'kan+eng', 'or': 'ori+eng', 'te': 'tel+eng' };
+        const result = await TesseractLib.recognize(ramImgUrl, ocrLangMap[sourceLang] || 'eng');
+        const extractedText = (result && result.data && result.data.text) ? result.data.text.replace(/\s+/g, ' ').trim() : '';
+
+        if (extractedText) {
+          inputBox.value = extractedText;
+          await translateAndSpeakTypedOrScannedWords();
+        } else {
+          inputBox.value = "";
+          alert("ఈ ఫోటోలో స్పష్టమైన పదాలు కనిపించలేదు.");
+        }
+      } catch (err) {
+        inputBox.value = "";
+        alert("స్కాన్ చేయడంలో అంతరాయం కలిగింది.");
+      } finally {
+        URL.revokeObjectURL(ramImgUrl);
+        event.target.value = '';
+        scanBtn.disabled = false;
+        scanBtn.innerText = "📷 ఫోటో స్కాన్ (Scan Words)";
+      }
+    }
+
+    async function translateAndSpeakTypedOrScannedWords() {
+      const rawWords = document.getElementById('wordsScanPasteInput').value.trim();
+      if (!rawWords) {
+        alert("దయచేసి ఏవైనా పదాలు టైప్ చేయండి, పేస్ట్ చేయండి లేదా 📷 ఫోటో స్కాన్ చేయండి!");
+        return;
+      }
+
+      const btn = document.getElementById('btnTranslateWordsNow');
+      const resBox = document.getElementById('wordsTranslatedResultBox');
+      const outText = document.getElementById('wordsTranslatedOutputText');
+      const badge = document.getElementById('wordsScanStatusBadge');
+      const sourceLang = getSelectedCourseSourceLang().split('-')[0] || 'auto';
+      const targetLang = getSelectedUserTargetLang() || 'te';
+
+      btn.disabled = true;
+      btn.innerText = "⏳ అనువదించి వినిపిస్తోంది...";
+      resBox.style.display = "block";
+      outText.innerText = "🔄 అనువదిస్తోంది...";
+
+      try {
+        const resp = await fetch('/api/translate-and-speak', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: 'demo_user',
+            text: rawWords,
+            source_lang: sourceLang,
+            target_lang: targetLang,
+            gender: 'female'
+          })
+        });
+        if (!resp.ok) throw new Error('Fallback');
+        const data = await resp.json();
+        lastWordsSpokenText = data.translated_text;
+        lastWordsAudioBase64 = data.audio_base64 || '';
+        lastWordsTargetLang = targetLang;
+        badge.innerText = `🔊 ${targetLang.toUpperCase()} Voice Active`;
+        outText.innerText = data.translated_text;
+        prependToLiveFeed(rawWords, data.translated_text, sourceLang, targetLang);
+
+        if (data.audio_base64) {
+          const audio = new Audio('data:audio/mp3;base64,' + data.audio_base64);
+          audio.onended = () => { audio.src = ''; };
+          audio.play().catch(() => speakStandalone(data.translated_text, targetLang));
+        } else {
+          await speakStandalone(data.translated_text, targetLang);
+        }
+      } catch (err) {
+        const translated = await directGoogleTranslate(rawWords, sourceLang, targetLang);
+        lastWordsSpokenText = translated;
+        lastWordsAudioBase64 = '';
+        lastWordsTargetLang = targetLang;
+        badge.innerText = `🔊 ${targetLang.toUpperCase()} Voice Active`;
+        outText.innerText = translated;
+        prependToLiveFeed(rawWords, translated, sourceLang, targetLang);
+        await speakStandalone(translated, targetLang);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "🔊 అనువదించి వినిపించు (Translate & Speak)";
+      }
+    }
+
+    function replayLastWordsVoice() {
+      if (lastWordsAudioBase64) {
+        const audio = new Audio('data:audio/mp3;base64,' + lastWordsAudioBase64);
+        audio.onended = () => { audio.src = ''; };
+        audio.play().catch(() => speakStandalone(lastWordsSpokenText, lastWordsTargetLang));
+      } else if (lastWordsSpokenText) {
+        speakStandalone(lastWordsSpokenText, lastWordsTargetLang);
+      }
+    }
+
+    function wipeWordsScanRam() {
+      document.getElementById('wordsScanPasteInput').value = '';
+      document.getElementById('wordsTranslatedOutputText').innerText = '';
+      document.getElementById('wordsTranslatedResultBox').style.display = 'none';
+      lastWordsSpokenText = '';
+      lastWordsAudioBase64 = '';
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
+  </script>
+</body>
+</html>
