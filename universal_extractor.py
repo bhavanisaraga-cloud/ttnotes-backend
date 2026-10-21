@@ -74,26 +74,31 @@ def transcribe_media_bytes_in_ram(media_bytes: bytes, source_lang: str = "en-IN"
     if not media_bytes or not sr:
         return ""
     try:
-        cmd = [
-            FFMPEG_BIN,
-            "-hide_banner", "-loglevel", "error",
-            "-i", "pipe:0",
-            "-t", "45",
-            "-vn",
-            "-acodec", "pcm_s16le",
-            "-ar", "16000",
-            "-ac", "1",
-            "-f", "wav",
-            "pipe:1"
-        ]
-        proc = subprocess.run(
-            cmd,
-            input=media_bytes,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=25
-        )
-        wav_bytes = proc.stdout
+        import tempfile
+        wav_bytes = b""
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tf:
+            tf.write(media_bytes)
+            tf_path = tf.name
+        try:
+            cmd = [
+                FFMPEG_BIN,
+                "-hide_banner", "-loglevel", "error",
+                "-i", tf_path,
+                "-t", "60",
+                "-vn",
+                "-acodec", "pcm_s16le",
+                "-ar", "16000",
+                "-ac", "1",
+                "-f", "wav",
+                "pipe:1"
+            ]
+            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=25)
+            wav_bytes = proc.stdout
+        finally:
+            try:
+                os.unlink(tf_path)
+            except Exception:
+                pass
         if not wav_bytes or len(wav_bytes) < 1000:
             return ""
 
