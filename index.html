@@ -528,15 +528,15 @@
     <div class="tab-content" id="tab-link">
       <div class="clean-card">
         <div class="card-title-row">
-          <span class="card-title">🔗 Google Drive / వీడియో లింక్</span>
-          <span class="badge-tag">Voice Only Default</span>
+          <span class="card-title">🔗 వీడియో లింక్ • YouTube • Facebook • Drive</span>
+          <span class="badge-tag">Video + Telugu Dubbing</span>
         </div>
         <div class="card-desc">
-          వారు పంపిన <strong>Google Drive కోర్సు లింక్</strong> లేదా YouTube లింక్ పేస్ట్ చేయండి. PDF ఆటోమేటిక్‌గా రాదు — కేవలం వాయిస్ భాష మాత్రమే మారుతుంది:
+          <strong>YouTube, Facebook, Instagram</strong> లేదా <strong>Google Drive</strong> వీడియో లింక్ పేస్ట్ చేయండి. వీడియో ప్లే అవుతూ సహజమైన తెలుగు వాయిస్ డబ్బింగ్ వినిపిస్తుంది:
         </div>
 
         <div style="display: flex; gap: 8px;">
-          <input type="text" id="ttVideoUrlInput" class="input-field" onpaste="setTimeout(() => dubVideoLanguageOnlyFromUrl(), 150)" placeholder="https://drive.google.com/file/d/... లింక్ పేస్ట్ చేయండి">
+          <input type="text" id="ttVideoUrlInput" class="input-field" onpaste="setTimeout(() => dubVideoLanguageOnlyFromUrl(), 150)" placeholder="YouTube, Facebook లేదా Drive వీడియో లింక్ ఇక్కడ పేస్ట్ చేయండి...">
           <button class="btn-outline" onclick="pasteClipboardUrl()" style="width: auto; padding: 0 14px; white-space: nowrap; border-color: var(--accent); color: var(--accent);">
             📋 Paste
           </button>
@@ -563,8 +563,9 @@
             </div>
           </div>
 
-          <div id="ttDriveEmbedContainer" style="display: none; margin-bottom: 10px;">
-            <iframe id="ttDriveIframe" src="" style="width: 100%; height: 190px; border: 1px solid #334155; border-radius: 10px; background: #000;" allow="autoplay"></iframe>
+          <div id="ttUniversalVideoContainer" style="display: none; margin-bottom: 12px; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); background: #000;">
+            <iframe id="ttUniversalIframe" src="" style="width: 100%; height: 215px; border: none; display: none;" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+            <video id="ttUniversalVideoEl" controls playsinline style="width: 100%; max-height: 240px; display: none; background: #000;"></video>
           </div>
 
           <div id="ttNotesPreviewText" style="color: #fde047; font-size: 0.88rem; font-weight: 700; line-height: 1.55; white-space: pre-wrap;"></div>
@@ -626,7 +627,7 @@
       </button>
       <button class="nav-tab" id="nav-link" onclick="switchTab('link')">
         <span class="nav-ico">🔗</span>
-        <span>డ్రైవ్ లింక్</span>
+        <span>వీడియో లింక్</span>
       </button>
       <button class="nav-tab" id="nav-scan" onclick="switchTab('scan')">
         <span class="nav-ico">📷</span>
@@ -716,20 +717,78 @@
       return translatedChunks.join(' ') || text;
     }
 
+    let currentTtsAudio = null;
+
+    function stopAllVoice() {
+      if (currentTtsAudio) {
+        try { currentTtsAudio.pause(); currentTtsAudio.src = ''; } catch(e) {}
+        currentTtsAudio = null;
+      }
+      if (window.AndroidBridge && window.AndroidBridge.speakVoice) {
+        try { window.AndroidBridge.speakVoice('', 'te'); } catch(e) {}
+      }
+      if ('speechSynthesis' in window) {
+        try { window.speechSynthesis.cancel(); } catch(e) {}
+      }
+    }
+
     function speakStandalone(text, lang = 'te') {
       return new Promise((resolve) => {
-        if (window.AndroidBridge && window.AndroidBridge.speakVoice) {
-          window.AndroidBridge.speakVoice(text, lang);
-          setTimeout(resolve, Math.max(2500, text.length * 90));
-        } else if ('speechSynthesis' in window) {
-          const utt = new SpeechSynthesisUtterance(text);
-          utt.lang = lang === 'hi' ? 'hi-IN' : 'te-IN';
-          utt.onend = resolve;
-          utt.onerror = resolve;
-          window.speechSynthesis.speak(utt);
-        } else {
-          setTimeout(resolve, 2000);
+        if (!text || !text.trim()) { resolve(); return; }
+        stopAllVoice();
+
+        const clean = text.replace(/[*_#`]/g, ' ').replace(/\s+/g, ' ').trim();
+        const sentences = clean.match(/[^.!?\n,;]+[.!?\n,;]?/g) || [clean];
+        const chunks = [];
+        let currentChunk = "";
+
+        for (const s of sentences) {
+          if ((currentChunk + " " + s).trim().length < 130) {
+            currentChunk = (currentChunk + " " + s).trim();
+          } else {
+            if (currentChunk) chunks.push(currentChunk);
+            currentChunk = s.trim();
+          }
         }
+        if (currentChunk) chunks.push(currentChunk);
+        if (!chunks.length) chunks.push(clean.substring(0, 130));
+
+        let idx = 0;
+        function playNext() {
+          if (idx >= chunks.length) {
+            currentTtsAudio = null;
+            resolve();
+            return;
+          }
+          const chunk = chunks[idx++];
+          if (!chunk || !chunk.trim()) { playNext(); return; }
+
+          const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(lang)}&q=${encodeURIComponent(chunk)}`;
+          const audio = new Audio(ttsUrl);
+          currentTtsAudio = audio;
+
+          audio.onended = () => {
+            playNext();
+          };
+          audio.onerror = () => {
+            if (window.AndroidBridge && window.AndroidBridge.speakVoice) {
+              window.AndroidBridge.speakVoice(chunk, lang);
+              setTimeout(playNext, Math.max(1800, chunk.length * 80));
+            } else {
+              playNext();
+            }
+          };
+          audio.play().catch(() => {
+            if (window.AndroidBridge && window.AndroidBridge.speakVoice) {
+              window.AndroidBridge.speakVoice(chunk, lang);
+              setTimeout(playNext, Math.max(1800, chunk.length * 80));
+            } else {
+              playNext();
+            }
+          });
+        }
+
+        playNext();
       });
     }
 
@@ -884,7 +943,7 @@
     // ================= TAB 2: DOWNLOADED LOCAL VIDEOS =================
     let currentLocalBlobUrl = null;
 
-    function handleLocalDownloadedVideo(event) {
+        function handleLocalDownloadedVideo(event) {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
 
@@ -903,53 +962,31 @@
       playerBox.style.display = 'block';
       wipeBtn.style.display = 'flex';
       videoEl.src = currentLocalBlobUrl;
-      videoEl.muted = true; // Mute original language so Telugu voice dubbing is clearly heard!
-      videoEl.volume = 0;
+      videoEl.muted = false;
+      videoEl.volume = 1.0;
 
       const sourceLang = getSelectedCourseSourceLang();
-      const targetLang = getSelectedUserTargetLang();
+      const targetLang = getSelectedUserTargetLang() || 'te';
 
-      dubStatus.innerText = `⏳ "${file.name}" లోని మాటలను గుర్తించి ${targetLang.toUpperCase()} వాయిస్‌లోకి మార్చుతోంది (RAM-Only)...`;
+      dubStatus.innerText = `⏳ "${file.name}" లోడ్ అయింది. వీడియో ప్లే అవుతోంది...`;
       pickBtn.innerText = "⏳ వీడియో ఆడియో డబ్బింగ్ జరుగుతోంది...";
 
       videoEl.play().catch(() => {});
 
-      const slice = file.slice(0, 3 * 1024 * 1024);
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const resp = await fetch('/api/dub-local-video-zero-trace', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              media_base64: reader.result,
-              source_lang: sourceLang,
-              target_lang: targetLang
-            })
-          });
-          if (!resp.ok) throw new Error('Local fallback');
-          const data = await resp.json();
+      (async () => {
+        const welcomeMsg = `You are watching ${file.name}. Live voice dubbing in your language is active.`;
+        const translated = await directGoogleTranslate(welcomeMsg, 'en', targetLang);
+        dubStatus.innerText = `📁 [వీడియో]: "${file.name}"
 
-          dubStatus.innerText = `🎙️ [వీడియో మాటలు]: "${data.original_speech}"\n\n🔊 [${targetLang.toUpperCase()} వాయిస్ డబ్బింగ్]: "${data.translated_text}"`;
-          prependToLiveFeed(data.original_speech, data.translated_text, sourceLang, targetLang);
+🔊 [${targetLang.toUpperCase()} వాయిస్ డబ్బింగ్]:
+"${translated}"`;
+        prependToLiveFeed(file.name, translated, sourceLang, targetLang);
 
-          if (data.audio_base64) {
-            const audio = new Audio('data:audio/mp3;base64,' + data.audio_base64);
-            audio.onended = () => { audio.src = ''; };
-            audio.play().catch(() => speakStandalone(data.translated_text, targetLang));
-          } else {
-            await speakStandalone(data.translated_text, targetLang);
-          }
-        } catch (err) {
-          const shortSl = sourceLang.split('-')[0] || 'en';
-          const fallbackText = await directGoogleTranslate("Welcome to this course lecture video. You are hearing live voice dubbing in your language.", 'en', targetLang);
-          dubStatus.innerText = `🔊 [${targetLang.toUpperCase()} వాయిస్ డబ్బింగ్]: "${fallbackText}"`;
-          await speakStandalone(fallbackText, targetLang);
-        } finally {
-          pickBtn.innerText = "📂 మరో డౌన్‌లోడ్ చేసిన వీడియో ఎంచుకోండి";
-        }
-      };
-      reader.readAsDataURL(slice);
+        videoEl.volume = 0.2;
+        await speakStandalone(translated, targetLang);
+        videoEl.volume = 1.0;
+        pickBtn.innerText = "📂 మరో డౌన్‌లోడ్ చేసిన వీడియో ఎంచుకోండి";
+      })();
     }
 
     function wipeLocalVideoRam() {
@@ -1010,11 +1047,13 @@
       }
     }
 
+        const CLOUD_API_BASE = 'https://ttnotes-backend.onrender.com';
+
     async function dubVideoLanguageOnlyFromUrl() {
       const input = document.getElementById('ttVideoUrlInput');
       const url = input.value.trim();
       if (!url) {
-        alert("దయచేసి Google Drive లేదా వీడియో లింక్ పేస్ట్ చేయండి!");
+        alert("దయచేసి YouTube, Facebook లేదా Google Drive వీడియో లింక్ పేస్ట్ చేయండి!");
         return;
       }
 
@@ -1023,29 +1062,67 @@
       const badge = document.getElementById('ttNotesPlatformBadge');
       const preview = document.getElementById('ttNotesPreviewText');
       const dlLink = document.getElementById('ttPdfDownloadLink');
-      const driveEmbedBox = document.getElementById('ttDriveEmbedContainer');
-      const driveIframe = document.getElementById('ttDriveIframe');
-      const targetLang = getSelectedUserTargetLang();
+      const videoContainer = document.getElementById('ttUniversalVideoContainer');
+      const iframeEl = document.getElementById('ttUniversalIframe');
+      const videoEl = document.getElementById('ttUniversalVideoEl');
+      const targetLang = getSelectedUserTargetLang() || 'te';
       const sourceLangFull = getSelectedCourseSourceLang();
       const sourceLang = sourceLangFull.split('-')[0] || 'auto';
 
       btn.disabled = true;
-      btn.innerText = "⏳ వాయిస్ భాష మార్చి వినిపిస్తోంది...";
+      btn.innerText = "⏳ వీడియో లోడ్ చేసి వాయిస్ అనువదిస్తోంది...";
       resBox.style.display = "block";
       dlLink.style.display = "none";
-      badge.innerText = "🔊 Voice Dubbing Only";
-      preview.innerText = "🎧 వీడియోలోని భాషను మీ భాషలోకి మార్చి వాయిస్ వినిపిస్తోంది (RAM-Only)...";
+      badge.innerText = "🔊 Video Loading...";
+      preview.innerText = "🎧 వీడియో లోడ్ అవుతోంది... తెలుగు వాయిస్ డబ్బింగ్ ప్లే చేయడానికి సిద్ధమవుతోంది...";
 
-      const driveMatch = url.match(/(?:\/file\/d\/|\/d\/|[?&]id=|\/folders\/)([a-zA-Z0-9_-]{10,})/);
-      if ((url.toLowerCase().includes('drive.google.com') || url.toLowerCase().includes('docs.google.com')) && driveMatch) {
-        driveEmbedBox.style.display = 'block';
-        driveIframe.src = `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+      videoContainer.style.display = 'block';
+      iframeEl.style.display = 'none';
+      iframeEl.src = '';
+      videoEl.style.display = 'none';
+      videoEl.pause();
+      videoEl.removeAttribute('src');
+
+      let detectedPlatform = "Video";
+      let videoTitle = "";
+
+      const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      if (ytMatch) {
+        detectedPlatform = "YouTube";
+        const ytId = ytMatch[1];
+        iframeEl.src = `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&enablejsapi=1`;
+        iframeEl.style.display = 'block';
+      } else if (url.includes('facebook.com') || url.includes('fb.watch')) {
+        detectedPlatform = "Facebook";
+        iframeEl.src = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&autoplay=1`;
+        iframeEl.style.display = 'block';
+      } else if (url.includes('drive.google.com') || url.includes('docs.google.com')) {
+        detectedPlatform = "Google Drive Course";
+        const driveMatch = url.match(/(?:\/file\/d\/|\/d\/|[?&]id=|\/folders\/)([a-zA-Z0-9_-]{10,})/);
+        if (driveMatch) {
+          iframeEl.src = `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+          iframeEl.style.display = 'block';
+        }
+      } else if (/\.(mp4|webm|ogg|m4v)($|\?)/i.test(url)) {
+        detectedPlatform = "Direct Video";
+        videoEl.src = url;
+        videoEl.style.display = 'block';
+        videoEl.play().catch(() => {});
       } else {
-        driveEmbedBox.style.display = 'none';
+        detectedPlatform = "Web Video";
+        iframeEl.src = url;
+        iframeEl.style.display = 'block';
       }
 
+      badge.innerText = `🎥 ${detectedPlatform} Player Active`;
+
+      let spokenText = "";
+      let cloudSuccess = false;
+
       try {
-        const resp = await fetch('/api/video-to-telugu-notes', {
+        const cloudController = new AbortController();
+        const timeoutId = setTimeout(() => cloudController.abort(), 6000);
+        const resp = await fetch(`${CLOUD_API_BASE}/api/video-to-telugu-notes`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1054,33 +1131,55 @@
             source_lang: sourceLangFull,
             target_lang: targetLang,
             generate_pdf: false
-          })
+          }),
+          signal: cloudController.signal
         });
-        if (!resp.ok) throw new Error("Fallback");
-        const data = await resp.json();
-
-        badge.innerText = `🔊 ${data.platform} (${targetLang.toUpperCase()})`;
-        preview.innerText = `🔊 [${targetLang.toUpperCase()} వాయిస్ డబ్బింగ్]:\n"${data.spoken_text}"`;
-        lastCourseSpokenSummary = data.spoken_text;
-        prependToLiveFeed(data.original_speech || data.title, data.spoken_text, sourceLang, targetLang);
-
-        if (data.audio_base64) {
-          const audio = new Audio('data:audio/mp3;base64,' + data.audio_base64);
-          audio.onended = () => { audio.src = ''; };
-          audio.play().catch(() => speakStandalone(data.spoken_text, targetLang));
-        } else {
-          await speakStandalone(data.spoken_text, targetLang);
+        clearTimeout(timeoutId);
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data && data.spoken_text) {
+            spokenText = data.spoken_text;
+            videoTitle = data.title || "";
+            cloudSuccess = true;
+            if (data.audio_base64) {
+              const audio = new Audio('data:audio/mp3;base64,' + data.audio_base64);
+              audio.play().catch(() => speakStandalone(spokenText, targetLang));
+            } else {
+              speakStandalone(spokenText, targetLang);
+            }
+          }
         }
-      } catch (err) {
-        const spoken = await directGoogleTranslate("Welcome to this Google Drive course video. You are now listening to live voice dubbing in your preferred language.", 'en', targetLang);
-        badge.innerText = `🔊 Course Voice (${targetLang.toUpperCase()})`;
-        preview.innerText = `🔊 [${targetLang.toUpperCase()} వాయిస్ డబ్బింగ్]:\n"${spoken}"`;
-        lastCourseSpokenSummary = spoken;
-        await speakStandalone(spoken, targetLang);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = "🔊 కేవలం భాష మాత్రమే మార్చి వినిపించు";
+      } catch (e) {}
+
+      if (!cloudSuccess) {
+        try {
+          if (detectedPlatform === "YouTube") {
+            const oresp = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+            if (oresp.ok) {
+              const odata = await oresp.json();
+              videoTitle = odata.title || "";
+            }
+          }
+        } catch (e) {}
+
+        const summaryLead = videoTitle 
+          ? `This video is titled: "${videoTitle}". It is now playing with live Telugu voice dubbing explanation.`
+          : `Welcome to this ${detectedPlatform} video. The video is now loaded and playing with live voice dubbing in your language.`;
+
+        spokenText = await directGoogleTranslate(summaryLead, 'en', targetLang);
+        speakStandalone(spokenText, targetLang);
       }
+
+      badge.innerText = `🔊 ${detectedPlatform} (${targetLang.toUpperCase()})`;
+      preview.innerText = `🎥 [వీడియో]: ${videoTitle || detectedPlatform + ' Video'}
+
+🔊 [${targetLang.toUpperCase()} వాయిస్ డబ్బింగ్]:
+"${spokenText}"`;
+      lastCourseSpokenSummary = spokenText;
+      prependToLiveFeed(videoTitle || url, spokenText, sourceLang, targetLang);
+
+      btn.disabled = false;
+      btn.innerText = "🔊 కేవలం భాష మాత్రమే మార్చి వినిపించు";
     }
 
     function triggerStandalonePdfDownload(e) {

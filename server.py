@@ -280,12 +280,26 @@ async def translate_and_speak(req: TranslateAudioRequest):
 @app.get("/api/test-audio")
 async def get_test_audio():
     sample = "నమస్కారం! వాక్స్ లైవ్ ఏఐ వాయిస్ అనువాద వ్యవస్థ విజయవంతంగా రన్ అవుతోంది."
-    communicate = edge_tts.Communicate(sample, "te-IN-ShrutiNeural")
-    chunks = []
-    async for chunk in communicate.stream():
-        if chunk["type"] == "audio":
-            chunks.append(chunk["data"])
-    audio_bytes = b"".join(chunks)
+    audio_bytes = b""
+    try:
+        communicate = edge_tts.Communicate(sample, "te-IN-ShrutiNeural")
+        chunks = []
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                chunks.append(chunk["data"])
+        audio_bytes = b"".join(chunks)
+    except Exception:
+        pass
+
+    if not audio_bytes:
+        try:
+            tts_url = f"https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=te&q={urllib.parse.quote(sample)}"
+            req_tts = urllib.request.Request(tts_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req_tts, timeout=8) as r_tts:
+                audio_bytes = r_tts.read()
+        except Exception:
+            audio_bytes = b""
+
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
     return {"message": sample, "audio_base64": audio_b64}
 
@@ -295,7 +309,6 @@ class LocalVideoDubRequest(BaseModel):
     media_base64: str
     source_lang: Optional[str] = "en-IN"
     target_lang: Optional[str] = "te"
-
 @app.post("/api/dub-local-video-zero-trace")
 async def api_dub_local_video_zero_trace(req: LocalVideoDubRequest):
     """
