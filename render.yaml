@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: ttnotes-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore
+    healthCheckPath: /api/test-audio
