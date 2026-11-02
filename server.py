@@ -51,12 +51,47 @@ VOICE_MAP = {
     "ml": "ml-IN-SobhanaNeural",      # Malayalam
 }
 
-def translate_text(text: str, sl: str = "auto", tl: str = "te"):
-    """Instant translation without disk storage, supporting multi-sentence long text."""
-    if not text or not text.strip():
-        return "", sl
+_INDIC_SCRIPT_RANGES = {
+    "te": ("\u0C00", "\u0C7F"),
+    "hi": ("\u0900", "\u097F"),
+    "mr": ("\u0900", "\u097F"),
+    "ta": ("\u0B80", "\u0BFF"),
+    "kn": ("\u0C80", "\u0CFF"),
+    "ml": ("\u0D00", "\u0D7F"),
+    "gu": ("\u0A80", "\u0AFF"),
+    "bn": ("\u0980", "\u09FF"),
+    "pa": ("\u0A00", "\u0A7F"),
+    "or": ("\u0B00", "\u0B7F"),
+}
 
-    clean = text.strip()
+
+def _guess_source_lang(text: str) -> str:
+    if not text:
+        return ""
+    for code in ("te", "hi", "ta", "kn", "ml", "gu", "bn", "pa", "or"):
+        lo, hi = _INDIC_SCRIPT_RANGES[code]
+        if len(re.findall(f"[{lo}-{hi}]", text)) > 4:
+            return code
+    if re.search(r"[A-Za-z]{3}", text):
+        return "en"
+    return ""
+
+
+def _looks_translated(text: str, tl: str) -> bool:
+    if not text or not text.strip():
+        return False
+    key = (tl or "te").split("-")[0].lower()
+    bounds = _INDIC_SCRIPT_RANGES.get(key)
+    if not bounds:
+        return True
+    stripped = re.sub(r"\s+", "", text)
+    if not stripped:
+        return False
+    hits = len(re.findall(f"[{bounds[0]}-{bounds[1]}]", stripped))
+    return hits >= 3 and (hits / len(stripped)) >= 0.4
+
+
+def _translate_clean_text(clean: str, sl: str, tl: str):
     # Split into chunks of <= 400 characters
     raw_chunks = []
     current = ""
@@ -94,17 +129,57 @@ def translate_text(text: str, sl: str = "auto", tl: str = "te"):
                             chunk_res = "".join([part[0] for part in data[0] if part and part[0]])
                             if len(data) > 2 and isinstance(data[2], str):
                                 detected_lang = data[2]
-                            if chunk_res:
+                            if _looks_translated(chunk_res, tl):
                                 break
+                            chunk_res = ""
                         elif isinstance(data[0], str):
-                            chunk_res = data[0]
-                            break
+                            candidate = data[0]
+                            if _looks_translated(candidate, tl):
+                                chunk_res = candidate
+                                break
             except Exception:
                 continue
         translated_pieces.append(chunk_res if chunk_res else chunk)
 
-    full_translated = " ".join(translated_pieces)
-    return full_translated, detected_lang
+    return " ".join(translated_pieces), detected_lang
+
+
+def translate_text(text: str, sl: str = "auto", tl: str = "te"):
+    """Instant translation without disk storage, supporting multi-sentence long text."""
+    if not text or not text.strip():
+        return "", sl
+
+    clean = text.strip()
+    # Google's sl=auto path intermittently returns junk (e.g. "5e") for long
+    # utterances, so verify the output script and retry with explicit sources.
+    source_attempts = []
+    base = ""
+    if sl and sl != "auto":
+        base = sl.split("-")[0].strip().lower()
+    guessed = _guess_source_lang(clean)
+    if base == "en" and guessed and guessed != "en":
+        # An explicit "English" hint is often just the app default. Trusting it
+        # makes Google transliterate Hindi/Tamil/etc. into Telugu script, which
+        # passes a script check but is not a translation. Try the real script first.
+        source_attempts.append(guessed)
+    if base:
+        source_attempts.append(base)
+    if guessed and guessed not in source_attempts:
+        source_attempts.append(guessed)
+    for extra in ("auto", "en"):
+        if extra not in source_attempts:
+            source_attempts.append(extra)
+
+    best_text = ""
+    best_detected = sl
+    for src in source_attempts:
+        result, detected = _translate_clean_text(clean, src, tl)
+        if _looks_translated(result, tl):
+            return result, detected
+        if not best_text:
+            best_text, best_detected = result, detected
+
+    return best_text, best_detected
 
 # ================= AUTHENTICATION SCHEMAS & ENDPOINTS =================
 
@@ -434,7 +509,8 @@ async def api_dub_local_video_zero_trace(req: LocalVideoDubRequest):
         extracted_speech = "Welcome to this course video lecture. Your local video is now playing with live voice dubbing."
 
     short_sl = source_lang.split("-")[0] if source_lang else "auto"
-    translated_text, detected_lang = translate_text(extracted_speech[:15000], sl="auto", tl=target_lang)
+    translate_sl = short_sl if short_sl and short_sl != "auto" else "auto"
+    translated_text, detected_lang = translate_text(extracted_speech[:15000], sl=translate_sl, tl=target_lang)
 
     audio_bytes = synthesize_voice_in_ram(translated_text, target_lang)
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
@@ -552,7 +628,7 @@ async def api_video_to_telugu_notes(req: VideoToNotesRequest):
     dub_slice = raw_text[:1500]
     spoken_translation, detected_lang = translate_text(
         dub_slice,
-        sl="auto",
+        sl=short_sl,
         tl=target_lang
     )
 
